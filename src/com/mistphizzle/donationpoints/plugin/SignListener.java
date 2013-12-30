@@ -1,0 +1,226 @@
+package com.mistphizzle.donationpoints.plugin;
+
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Hanging;
+import org.bukkit.entity.ItemFrame;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.block.Sign;
+
+public class SignListener implements Listener {
+
+	public static String SignMessage;
+	public static DonationPoints plugin;
+	public static String Points;
+
+	public SignListener(DonationPoints instance) {
+		plugin = instance;
+	}
+	
+	@EventHandler
+	public void onEntityDamageByEntityEvent(EntityDamageByEntityEvent e) {
+		if (e.isCancelled()) {
+			return;
+		}
+		
+		if (e.getEntityType() == EntityType.ITEM_FRAME && e.getDamager() instanceof Player) {
+			Player p = (Player) e.getDamager();
+			Location loc = e.getEntity().getLocation();
+			if (PlayerListener.links.containsKey(p.getName())) { // Player is linking item frame.
+				String packName = PlayerListener.links.get(p.getName());
+				if (Methods.isFrameLinked(loc.getX(), loc.getY(), loc.getZ(), loc.getWorld().getName(), Commands.Server)) {
+					p.sendMessage(Commands.Prefix + " §cThis item frame is already linked.");
+					PlayerListener.links.remove(p.getName());
+					e.setCancelled(true);
+					return;
+				}
+				Methods.linkFrame(packName, loc.getX(), loc.getY(), loc.getZ(), loc.getWorld().getName(), Commands.Server);
+				p.sendMessage(Commands.Prefix + " §cSuccessfully linked §e" + packName + "§c.");
+				PlayerListener.links.remove(p.getName());
+				e.setCancelled(true);
+				return;
+			}
+			if (Methods.isFrameLinked(loc.getX(), loc.getY(), loc.getZ(), loc.getWorld().getName(), Commands.Server)) {
+				if (p.isSneaking()) {
+					if (!DonationPoints.permission.has(p, "donationpoints.sign.break")) {
+						p.sendMessage(Commands.Prefix + Commands.noPermissionMessage);
+						e.setCancelled(true);
+						return;
+					}
+					if (DonationPoints.permission.has(p, "donationpoitns.sign.break")) {
+						p.sendMessage(Commands.Prefix + "§cItem Frame Unlinked.");
+						Methods.unlinkFrame(loc.getX(), loc.getY(), loc.getZ(), loc.getWorld().getName(), Commands.Server);
+						return;
+					}
+				}
+				e.setCancelled(true);
+				String packName = Methods.getLinkedPackage(loc.getX(), loc.getY(), loc.getZ(), loc.getWorld().getName(), Commands.Server);
+				Double price = plugin.getConfig().getDouble("packages." + packName + ".price");
+				String packDesc = plugin.getConfig().getString("packages." + packName + ".description");
+				if (!DonationPoints.permission.has(p, "donationpoints.sign.use")) {
+					p.sendMessage(Commands.Prefix + Commands.noPermissionMessage);
+					return;
+				}
+				if (DonationPoints.permission.has(p, "donationpoints.free")) {
+					price = 0.0;
+				}
+				if (plugin.getConfig().getBoolean("General.SpecificPermissions", true)) {
+					if (!DonationPoints.permission.has(p, "donationpoints.sign.use." + packName)) {
+						p.sendMessage(Commands.Prefix + Commands.noPermissionMessage);
+						e.setCancelled(true);
+						return;
+					}
+					p.sendMessage(Commands.Prefix + "§cRight Clicking this sign will allow you to purchase §3" + packName + "§c for §3" + price + "§c.");
+					p.sendMessage(Commands.Prefix + "§cDescription: §3" + packDesc);
+				}
+				if (!plugin.getConfig().getBoolean("General.SpecificPermissions")) {
+					p.sendMessage(Commands.Prefix + "§cRight Clicking this sign will allow you to purchase §3" + packName + "§c for §3" + price + "§c.");
+					p.sendMessage(Commands.Prefix + "§cDescription: §3" + packDesc);
+					return;
+				}
+			}
+		}
+	}
+//
+//	@EventHandler
+//	public void HangingEvent(HangingBreakByEntityEvent e) {
+//		Hanging broken = e.getEntity();
+//		Entity remover = e.getRemover();
+//
+//		if (remover instanceof Player) {
+//			Player player = (Player) remover;
+//			if (broken instanceof ItemFrame) {
+//				Double x = broken.getLocation().getX();
+//				Double y = broken.getLocation().getY();
+//				Double z = broken.getLocation().getZ();
+//				String world = broken.getWorld().getName();
+//				if (PlayerListener.links.containsKey(player.getName())) {
+//					String packName = PlayerListener.links.get(player.getName());
+//					if (Methods.isFrameLinked(x, y, z, world, Commands.Server)) {
+//						player.sendMessage(Commands.Prefix + "Â§cThis item frame is already linked.");
+//						PlayerListener.links.remove(player.getName());
+//						e.setCancelled(true);
+//						return;
+//					}
+//					Methods.linkFrame(packName, x, y, z, world, Commands.Server);
+//					player.sendMessage(Commands.Prefix + "Â§cSuccessfully linked Â§3" + packName + "Â§3.");
+//					PlayerListener.links.remove(player.getName());
+//					e.setCancelled(true);
+//				} else if (!PlayerListener.links.containsKey(player.getName())) {
+//					if (Methods.isFrameLinked(x, y, z, world, Commands.Server)) {
+//						if (player.isSneaking()) {
+//							if (!DonationPoints.permission.has(player, "donationpoints.sign.break")) {
+//								player.sendMessage(Commands.Prefix + Commands.noPermissionMessage);
+//								e.setCancelled(true);
+//								return;
+//							}
+//							if (DonationPoints.permission.has(player, "donationpoints.sign.break")) {
+//								Methods.unlinkFrame(x, y, z, world, Commands.Server);
+//								player.sendMessage(Commands.Prefix + "Â§cItem Frame unlinked.");
+//								e.setCancelled(false);
+//								return;
+//							}
+//						}
+//						e.setCancelled(true);
+//						String packName = Methods.getLinkedPackage(x, y, z, world, Commands.Server);
+//						Double price = plugin.getConfig().getDouble("packages." + packName + ".price");
+//						String packDesc = plugin.getConfig().getString("packages." + packName + ".description");
+//						if (!DonationPoints.permission.has(player, "donationpoints.sign.use")) {
+//							player.sendMessage(Commands.Prefix + Commands.noPermissionMessage);
+//							return;
+//						}
+//						if (DonationPoints.permission.has(player, "donationpoints.free")) {
+//							price = 0.0;
+//						}
+//						if (plugin.getConfig().getBoolean("General.SpecificPermissions", true)) {
+//							if (!DonationPoints.permission.has(player, "donationpoints.sign.use." + packName)) {
+//								player.sendMessage(Commands.Prefix + Commands.noPermissionMessage);
+//								e.setCancelled(true);
+//								return;
+//							}
+//							player.sendMessage(Commands.Prefix + "Â§cRight Clicking this sign will allow you to purchase Â§3" + packName + "Â§c for Â§3" + price + "Â§c.");
+//							player.sendMessage(Commands.Prefix + "Â§cDescription: Â§3" + packDesc);
+//						}
+//						if (!plugin.getConfig().getBoolean("General.SpecificPermissions")) {
+//							player.sendMessage(Commands.Prefix + "Â§cRight Clicking this sign will allow you to purchase Â§3" + packName + "Â§c for Â§3" + price + "Â§c.");
+//							player.sendMessage(Commands.Prefix + "Â§cDescription: Â§3" + packDesc);
+//							return;
+//						}
+//					}
+//				}
+//			}
+//		}
+//	}
+	@EventHandler
+	public void onBlockBreak(BlockBreakEvent e) {
+		Player player = e.getPlayer();
+		Block block = e.getBlock();
+
+		if (block.getState() instanceof Sign) {
+			Sign s = (Sign) block.getState();
+			String signline1 = s.getLine(0);
+			if (signline1.equalsIgnoreCase("[" + SignMessage + "]"))  {
+				if (DonationPoints.permission.has(player, "donationpoints.sign.break")) {
+					if (player.getGameMode() == GameMode.CREATIVE) {
+						if (!player.isSneaking()) {
+							player.sendMessage(Commands.Prefix + "§cYou must sneak to break DonationPoints signs while in Creative.");
+							e.setCancelled(true);
+						}
+					}
+				}
+				if (!DonationPoints.permission.has(player, "donationpoints.sign.break")) {
+					player.sendMessage(Commands.Prefix + Commands.noPermissionMessage);
+					e.setCancelled(true);
+				}
+			}
+
+		}
+	}
+
+	@EventHandler
+	public void onSignChance(SignChangeEvent e) {
+		if (e.isCancelled()) return;
+		if (e.getPlayer() == null) return;
+		Player p = e.getPlayer();
+		String line1 = e.getLine(0);
+		Block block = e.getBlock();
+		String pack = e.getLine(1);
+
+		// Permissions
+		if (line1.equalsIgnoreCase("[" + SignMessage + "]") && !DonationPoints.permission.has(p, "donationpoints.sign.create")) {
+			e.setCancelled(true);
+			block.breakNaturally();
+			p.sendMessage(Commands.Prefix + Commands.noPermissionMessage);
+		} else if (DonationPoints.permission.has(p, "donationpoints.sign.create") && line1.equalsIgnoreCase("[" + SignMessage + "]")) {
+			if (block.getType() == Material.SIGN_POST) {
+				p.sendMessage(Commands.Prefix + "§cDonationPoints signs must be placed on a wall.");
+				block.breakNaturally();
+				e.setCancelled(true);
+			} if (plugin.getConfig().getString("packages." + pack) == null) {
+				e.setCancelled(true);
+				p.sendMessage(Commands.Prefix + Commands.InvalidPackage);
+				block.breakNaturally();
+			} if (e.getLine(1).isEmpty()) {
+				e.setCancelled(true);
+				p.sendMessage(Commands.Prefix + Commands.InvalidPackage);
+				block.breakNaturally();
+			} else {
+				if (plugin.getConfig().getBoolean("General.AutoFillSigns", true)) {
+					Double price = plugin.getConfig().getDouble("packages." + pack + ".price");
+					e.setLine(2, (price + ' ' + SignListener.Points));
+				}
+				p.sendMessage(Commands.Prefix + "§cYou have created a DonationPoints sign.");
+			}
+		} 
+	}
+}

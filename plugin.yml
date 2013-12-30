@@ -1,0 +1,42 @@
+name: DonationPoints
+author: MistPhizzle
+version: 1.9.1
+main: com.mistphizzle.donationpoints.plugin.DonationPoints
+depend: [Vault]
+commands:
+  donationpoints:
+    usage: /<command>
+    aliases: [dp, points]
+permissions:
+  donationpoints.free:
+    default: false
+  donationpoints.admin:
+    default: op
+    children:
+      donationpoints.sign.create: true
+      donationpoints.sign.use: true
+      donationpoints.create: true
+      donationpoints.create.others: true
+      donationpoints.balance: true
+      donationpoints.balance.others: true
+      donationpoints.give: true
+      donationpoints.take: true
+      donationpoints.set: true
+      donationpoints.sign.break: true
+      donationpoints.reload: true
+      donationpoints.version: true
+      donationpoints.delete: true
+      donationpoints.purge: true
+      donationpoints.user: true
+      donationpoints.link: true
+  donationpoints.user:
+    default: op
+    children:
+      donationpoints.transfer: true
+      donationpoints.sign.use: true
+      donationpoints.create: true
+      donationpoints.balance: true
+      donationpoints.confirm: true
+      donationpoints.package.info: true
+      donationpoints.purchase: true
+      donationpoints.activate: true
